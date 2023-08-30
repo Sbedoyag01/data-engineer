@@ -1,9 +1,8 @@
 import requests
 import psycopg2
+import pandas as pd
 from datetime import datetime, timedelta
 import time
-
-
 
 # Declaración de credenciales y configuración
 db_params = {
@@ -31,23 +30,18 @@ def insert_data_to_redshift(data):
         connection = psycopg2.connect(**db_params)
         cursor = connection.cursor()
 
-        for item in data:
-            query = """
-            INSERT INTO datos_gov_co (impacto, circuito, servicio, motivo, solicita,
-            numeroinstalacion, municipio, direccion, nombreresponsable, fecha_y_hora_esperada,
-            inicio, fin, horas, estado, fecharesgistro, explicacion, barrio, nombrecontratista, tipoaviso)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
-            """
-            values = (
-                item.get('impacto'), item.get('circuito'), item.get('servicio'),
-                item.get('motivo'), item.get('solicita'), item.get('numeroinstalacion'),
-                item.get('municipio'), item.get('direccion'), item.get('nombreresponsable'),
-                item.get('fecha_y_hora_esperada'), item.get('inicio'), item.get('fin'),
-                item.get('horas'), item.get('estado'), item.get('fecharesgistro'),
-                item.get('explicacion'), item.get('barrio'), item.get('nombrecontratista'),
-                item.get('tipoaviso')
-            )
-            cursor.execute(query, values)
+       
+        df = pd.DataFrame(data)
+        
+       
+        column_order = ["impacto", "circuito", "servicio", "motivo", "solicita",
+                        "numeroinstalacion", "municipio", "direccion", "nombreresponsable",
+                        "fecha_y_hora_esperada", "inicio", "fin", "horas", "estado",
+                        "fecharesgistro", "explicacion", "barrio", "nombrecontratista", "tipoaviso"]
+        df = df[column_order]
+        
+        
+        df.to_sql("datos_gov_co", connection, if_exists="append", index=False)
 
         connection.commit()
         print("Datos insertados exitosamente:", len(data), "registros")
