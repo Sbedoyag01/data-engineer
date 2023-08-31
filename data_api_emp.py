@@ -1,16 +1,19 @@
 import requests
 import psycopg2
 import pandas as pd
-from datetime import datetime, timedelta
-import time
+from dotenv import load_dotenv
+import os
 
-# Declaración de credenciales y configuración
+# Carga las variables de entorno desde el archivo .env
+load_dotenv(dotenv_path="crede.env")
+
+# Lee las variables de entorno
 db_params = {
-    "host": "data-engineer-cluster.cyhh5bfevlmn.us-east-1.redshift.amazonaws.com",
-    "dbname": "data-engineer-database",
-    "user": "sebasbg01_coderhouse",
-    "password": "********", 
-    "port": "5439"
+    "host": os.environ["DB_HOST"],
+    "dbname": os.environ["DB_NAME"],
+    "user": os.environ["DB_USER"],
+    "password": os.environ["DB_PASSWORD"],
+    "port": os.environ["DB_PORT"]
 }
 
 api_url = "https://www.datos.gov.co/resource/r9fv-awbc.json"
@@ -30,18 +33,34 @@ def insert_data_to_redshift(data):
         connection = psycopg2.connect(**db_params)
         cursor = connection.cursor()
 
-       
-        df = pd.DataFrame(data)
-        
-       
-        column_order = ["impacto", "circuito", "servicio", "motivo", "solicita",
-                        "numeroinstalacion", "municipio", "direccion", "nombreresponsable",
-                        "fecha_y_hora_esperada", "inicio", "fin", "horas", "estado",
-                        "fecharesgistro", "explicacion", "barrio", "nombrecontratista", "tipoaviso"]
-        df = df[column_order]
-        
-        
-        df.to_sql("datos_gov_co", connection, if_exists="append", index=False)
+        for item in data:
+            impacto = item.get('impacto')[:250] if item.get('impacto') is not None else None
+            circuito = item.get('circuito')[:250] if item.get('circuito') is not None else None
+            servicio = item.get('servicio')[:250] if item.get('servicio') is not None else None
+            motivo = item.get('motivo')[:250] if item.get('motivo') is not None else None
+            solicita = item.get('solicita')[:250] if item.get('solicita') is not None else None
+            numeroinstalacion = item.get('numeroinstalacion')[:250] if item.get('numeroinstalacion') is not None else None
+            municipio = item.get('municipio')[:250] if item.get('municipio') is not None else None
+            nombreresponsable = item.get('nombreresponsable')[:250] if item.get('nombreresponsable') is not None else None
+            estado = item.get('estado')[:250] if item.get('estado') is not None else None
+            barrio = item.get('barrio')[:250] if item.get('barrio') is not None else None
+            nombrecontratista = item.get('nombrecontratista')[:250] if item.get('nombrecontratista') is not None else None
+            tipoaviso = item.get('tipoaviso')[:250] if item.get('tipoaviso') is not None else None
+
+            query = """
+            INSERT INTO datos_gov_co (impacto, circuito, servicio, motivo, solicita,
+            numeroinstalacion, municipio, nombreresponsable, fecha_y_hora_esperada,
+            inicio, fin, horas, estado, fecharegistro, barrio, nombrecontratista, tipoaviso)
+            VALUES ( %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
+            """
+            values = (
+                impacto, circuito, servicio, motivo, solicita,
+                numeroinstalacion, municipio, nombreresponsable,
+                item.get('fecha_y_hora_esperada'), item.get('inicio'), item.get('fin'),
+                item.get('horas'), estado, item.get('fecharegistro'),
+                barrio, nombrecontratista, tipoaviso
+            )
+            cursor.execute(query, values)
 
         connection.commit()
         print("Datos insertados exitosamente:", len(data), "registros")
@@ -52,20 +71,10 @@ def insert_data_to_redshift(data):
         connection.close()
 
 def main():
-    while True:
-        current_time = datetime.now()
-        print("Obteniendo datos de la API...")
-        data = get_data_from_api(api_url)
-        if data:
-            insert_data_to_redshift(data)
-
-        # Tiempo de espera antes de la próxima actualización (cada 7 días)
-        next_update_time = current_time + timedelta(days=7)
-        print("Esperando hasta la próxima actualización a las:", next_update_time)
-        time_to_wait = (next_update_time - datetime.now()).total_seconds()
-        
-        if time_to_wait > 0:
-            time.sleep(time_to_wait)
+    print("Obteniendo datos de la API...")
+    data = get_data_from_api(api_url)
+    if data:
+        insert_data_to_redshift(data)
 
 if __name__ == "__main__":
     main()
