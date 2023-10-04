@@ -1,0 +1,22 @@
+# Manual de Instrucciones para Ejecutar el Proyecto
+
+Este manual te guiará a través de los pasos necesarios para configurar y ejecutar el proyecto.
+
+## Requisitos Previos
+
+Asegúrate de tener instalados los siguientes requisitos previos:
+
+1. Docker: [Instrucciones de instalación](https://www.docker.com/get-started)
+
+## Pasos para Ejecutar el Proyecto
+
+Sigue estos pasos para ejecutar el proyecto en tu entorno:
+
+1. Clona o descarga el proyecto desde [repositorio_de_github].
+
+2. Navega hasta la carpeta raíz del proyecto en tu terminal.
+
+3. Construye la imagen Docker utilizando el siguiente comando:
+   
+   ```bash
+   docker build -t mi_contenedor_airflow .
